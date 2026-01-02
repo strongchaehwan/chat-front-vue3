@@ -32,6 +32,7 @@ export default {
       messages: [],
       newMessage: "",
       stompClient: null,
+      token: "",
     };
   },
   created() {
@@ -47,13 +48,19 @@ export default {
         `${import.meta.env.VITE_APP_API_BASE_URL}/connect`
       );
       this.stompClient = Stomp.over(sockJs);
+      this.token = localStorage.getItem("token");
 
-      this.stompClient.connect({}, () => {
-        this.stompClient.subscribe(`/topic/1`, (message) => {
-          this.messages.push(message.body);
-          this.scrollToBottom();
-        });
-      });
+      this.stompClient.connect(
+        {
+          Authorization: `Bearer ${this.token}`,
+        },
+        () => {
+          this.stompClient.subscribe(`/topic/1`, (message) => {
+            this.messages.push(message.body);
+            this.scrollToBottom();
+          });
+        }
+      );
     },
     sendMessage() {
       if (this.newMessage.trim() === "") return;
