@@ -43,10 +43,12 @@ export default {
       stompClient: null, // 스톰프 연결 객체
       token: "",
       senderEmail: "", //로그인 사용자 이메일
+      roomId: null,
     };
   },
   created() {
     this.senderEmail = localStorage.getItem("email"); // 로그인 사용자 이메일
+    this.roomId = this.$route.params.roomId;
     this.connectWebsocket(); // 채팅 화면 들어오는 순간 웹소켓 즉시연결
   },
   // 사용자가 현재 라우트에서 다른 라우트로 이동하려고 할때 호출되는 훅함수
@@ -77,7 +79,7 @@ export default {
         },
         () => {
           // 클라이언트 구독 , SimpleBroker가 구독자 목록에 등록
-          this.stompClient.subscribe(`/topic/1`, (message) => {
+          this.stompClient.subscribe(`/topic/${this.roomId}`, (message) => {
             console.log(message); // ex "{"message":"ㅎㅇ","senderEmail":"limcheyean@gmail.com"}"
             const parseMessage = JSON.parse(message.body);
             this.messages.push(parseMessage);
@@ -94,7 +96,10 @@ export default {
         senderEmail: this.senderEmail,
       };
 
-      this.stompClient.send(`/publish/1`, JSON.stringify(messageData));
+      this.stompClient.send(
+        `/publish/${this.roomId}`,
+        JSON.stringify(messageData)
+      );
 
       this.clearInput();
     },
@@ -109,7 +114,7 @@ export default {
     },
     disconnectWebSocket() {
       if (this.stompClient && this.stompClient.connected) {
-        this.stompClient.unsubscribe(`/topic/1`);
+        this.stompClient.unsubscribe(`/topic/${this.roomId}`);
         this.stompClient.disconnect();
       }
     },
