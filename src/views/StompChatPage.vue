@@ -33,7 +33,7 @@
 <script>
 import SockJS from "sockjs-client";
 import Stomp from "webstomp-client";
-//import axios from "axios";
+import axios from "axios";
 
 export default {
   data() {
@@ -46,10 +46,21 @@ export default {
       roomId: null,
     };
   },
-  created() {
-    this.senderEmail = localStorage.getItem("email"); // 로그인 사용자 이메일
+  async created() {
+    this.senderEmail = localStorage.getItem("email");
     this.roomId = this.$route.params.roomId;
-    this.connectWebsocket(); // 채팅 화면 들어오는 순간 웹소켓 즉시연결
+
+    try {
+      // await를 붙여서 서버 응답이 올 때까지 기다립니다.
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_API_BASE_URL}/chat/history/${this.roomId}`
+      );
+      this.messages = response.data;
+    } catch (error) {
+      console.error("채팅 내역을 불러오는데 실패했습니다:", error);
+    }
+
+    this.connectWebsocket();
   },
   // 사용자가 현재 라우트에서 다른 라우트로 이동하려고 할때 호출되는 훅함수
   beforeRouteLeave(to, from, next) {
@@ -79,12 +90,18 @@ export default {
         },
         () => {
           // 클라이언트 구독 , SimpleBroker가 구독자 목록에 등록
-          this.stompClient.subscribe(`/topic/${this.roomId}`, (message) => {
-            console.log(message); // ex "{"message":"ㅎㅇ","senderEmail":"limcheyean@gmail.com"}"
-            const parseMessage = JSON.parse(message.body);
-            this.messages.push(parseMessage);
-            this.scrollToBottom();
-          });
+          this.stompClient.subscribe(
+            `/topic/${this.roomId}`,
+            (message) => {
+              console.log(message); // ex "{"message":"ㅎㅇ","senderEmail":"limcheyean@gmail.com"}"
+              const parseMessage = JSON.parse(message.body);
+              this.messages.push(parseMessage);
+              this.scrollToBottom();
+            },
+            {
+              Authorization: `Bearer ${this.token}`,
+            }
+          );
         }
       );
     },
